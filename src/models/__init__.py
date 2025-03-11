@@ -1,3 +1,0 @@
-"""
-Package pour les modèles
-""" 
