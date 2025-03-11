@@ -6,20 +6,24 @@ from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_squared_error, r2_score
 import joblib
 import os
+from config.model_config import MODEL_PARAMS
 
-def train_model(X_train=None, y_train=None, alpha: float = 1.0):
+def train_model(X_train=None, y_train=None, params=None):
     """
-    Créer un modèle Ridge
+    Créer et entraîner un modèle Ridge
     
     Args:
         X_train: Features d'entraînement 
         y_train: Cible d'entraînement 
-        alpha: Paramètre de régularisation
+        params: Paramètres du modèle (utilise MODEL_PARAMS par défaut)
         
     Returns:
-        Modèle Ridge 
+        Modèle Ridge entraîné
     """
-    model = Ridge(alpha=alpha)
+    if params is None:
+        params = MODEL_PARAMS
+        
+    model = Ridge(**params)
     if X_train is not None and y_train is not None:
         model.fit(X_train, y_train)
     return model
@@ -64,7 +68,7 @@ def load_model(filepath: str):
     Charger un modèle
     
     Args:
-        filepath: Chemin vers le fichier du modèle
+        filepath: Chemin du modèle à charger
         
     Returns:
         Modèle chargé

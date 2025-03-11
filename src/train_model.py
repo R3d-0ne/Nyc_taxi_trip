@@ -15,6 +15,7 @@ from src.preprocessing.preprocess import (
     transform_target
 )
 from src.models.train import train_model, evaluate_model, save_model
+from config.model_config import FEATURES, SPLIT_PARAMS
 
 def prepare_features(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -44,32 +45,30 @@ def main():
     print("\nPréparation des features...")
     data = prepare_features(data)
     
-    # Définir les features numériques et catégorielles
-    num_features = ['abnormal_period', 'hour']
-    cat_features = ['weekday', 'month']
-    
     # Transformer la cible
     y = transform_target(data['trip_duration'])
     
     # Créer un pipeline de prétraitement
     preprocessor = ColumnTransformer(
         transformers=[
-            ('num', StandardScaler(), num_features),
-            ('cat', OneHotEncoder(drop='first'), cat_features)
+            ('num', StandardScaler(), FEATURES['numerical']),
+            ('cat', OneHotEncoder(drop='first'), FEATURES['categorical'])
         ]
     )
     
     # Diviser les données
     print("\nDivision des données...")
     X_train, X_test, y_train, y_test = train_test_split(
-        data[num_features + cat_features], y, test_size=0.2, random_state=42
+        data[FEATURES['numerical'] + FEATURES['categorical']], 
+        y, 
+        **SPLIT_PARAMS
     )
     print(f"Données divisées: {X_train.shape[0]} exemples d'entraînement, {X_test.shape[0]} exemples de test")
     
     # Créer un pipeline complet
     pipeline = Pipeline([
         ('preprocessor', preprocessor),
-        ('model', train_model(None, None, alpha=1.0))
+        ('model', train_model())
     ])
     
     # Entraîner le modèle
