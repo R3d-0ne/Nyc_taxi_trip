@@ -12,7 +12,7 @@ def main():
     data = prepare_data(data)
     
     # Prendre un petit échantillon pour le test
-    test_data = data.sample(n=5, random_state=42)
+    test_data = data.sample(n=15, random_state=42)
     
     # Charger le modèle
     print("\nChargement du modèle...")

@@ -1,3 +1,6 @@
+"""
+Module pour charger les données
+"""
 import pandas as pd
 import zipfile
 from sklearn.model_selection import train_test_split
@@ -16,8 +19,17 @@ def load_data(filepath: str) -> pd.DataFrame:
 
 def prepare_data(data: pd.DataFrame) -> pd.DataFrame:
     """Nettoie les données et convertit la date."""
-    return data.drop(columns=[c for c in ['id', 'dropoff_datetime'] if c in data.columns], errors='ignore')\
-               .assign(pickup_datetime=pd.to_datetime(data['pickup_datetime']))
+    from ..preprocessing import preprocess
+
+    # Convertir d'abord en datetime
+    data = data.assign(pickup_datetime=pd.to_datetime(data['pickup_datetime']))
+    
+    # Calculer le nombre de trajets par jour
+    df_counts = data['pickup_datetime'].dt.date.value_counts()
+    
+    # Mettre à jour la variable abnormal_dates dans le module preprocess
+    preprocess.abnormal_dates = df_counts[df_counts < 6300]
+    return data.drop(columns=[c for c in ['id', 'dropoff_datetime'] if c in data.columns], errors='ignore')
 
 def split_train_test(data: pd.DataFrame, target_col: str = 'trip_duration', test_size: float = 0.3, random_state: int = 42):
     """Divise les données en train et test."""

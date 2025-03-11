@@ -11,11 +11,11 @@ from sklearn.pipeline import Pipeline
 
 from src.data.load_data import load_data, prepare_data
 from src.preprocessing.preprocess import (
-    extract_datetime_features, 
+    step1_add_features, 
     transform_target
 )
 from src.models.train import train_model, evaluate_model, save_model
-from config.model_config import FEATURES, SPLIT_PARAMS
+from config.model_config import FEATURES, SPLIT_PARAMS, PATHS
 
 def prepare_features(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -27,18 +27,13 @@ def prepare_features(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         DataFrame avec les features préparées
     """
-    # Copier pour éviter de modifier l'original
-    data = df.copy()
-    
-    # Extraire les features de date/heure
-    data = extract_datetime_features(data)
-    
-    return data
+    # Appliquer la fonction step1_add_features
+    return step1_add_features(df)
 
 def main():
     # Charger les données
     print("Chargement des données...")
-    data = load_data("data/raw/New_York_City_Taxi_Trip_Duration.zip")
+    data = load_data(PATHS['data'])
     data = prepare_data(data)
     
     # Préparer les features
@@ -77,19 +72,20 @@ def main():
     
     # Évaluer le modèle
     print("\nÉvaluation du modèle...")
-    y_train_pred = pipeline.predict(X_train)
-    y_test_pred = pipeline.predict(X_test)
+    train_metrics = evaluate_model(pipeline, X_train, y_train)
+    test_metrics = evaluate_model(pipeline, X_test, y_test)
     
-    train_rmse = np.sqrt(np.mean((y_train - y_train_pred) ** 2))
-    test_rmse = np.sqrt(np.mean((y_test - y_test_pred) ** 2))
+    print(f"Métriques d'entraînement:")
+    print(f"- RMSE: {train_metrics['rmse']:.4f}")
+    print(f"- R²: {train_metrics['r2']:.4f}")
     
-    print(f"RMSE d'entraînement: {train_rmse:.4f}")
-    print(f"RMSE de test: {test_rmse:.4f}")
+    print(f"\nMétriques de test:")
+    print(f"- RMSE: {test_metrics['rmse']:.4f}")
+    print(f"- R²: {test_metrics['r2']:.4f}")
     
     # Sauvegarder le modèle
     print("\nSauvegarde du modèle...")
-    os.makedirs("models", exist_ok=True)
-    save_model(pipeline, "models/ridge_model.joblib")
+    save_model(pipeline, PATHS['model'])
 
 if __name__ == "__main__":
     main() 

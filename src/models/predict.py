@@ -3,8 +3,9 @@ Module pour faire des prédictions avec le modèle entraîné
 """
 import numpy as np
 import pandas as pd
-from ..preprocessing.preprocess import extract_datetime_features
+from ..preprocessing.preprocess import step1_add_features
 from .train import load_model
+from config.model_config import FEATURES, PATHS
 
 def prepare_features(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -16,18 +17,11 @@ def prepare_features(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         DataFrame avec les features préparées
     """
-    # Copier pour éviter de modifier l'original
-    data = df.copy()
-    
-    # Extraire les features temporelles
-    data = extract_datetime_features(data)
+    # Appliquer la fonction step1_add_features
+    data = step1_add_features(df)
     
     # Sélectionner les features utilisées pour l'entraînement
-    # Ces features correspondent à celles utilisées dans la section 4.6 du notebook
-    num_features = ['abnormal_period', 'hour']
-    cat_features = ['weekday', 'month']
-    
-    features = num_features + cat_features
+    features = FEATURES['numerical'] + FEATURES['categorical']
     
     return data[features]
 
@@ -59,7 +53,7 @@ def format_predictions(df: pd.DataFrame, predictions: np.ndarray) -> pd.DataFram
         predictions: Array des prédictions
         
     Returns:
-        DataFrame avec les prédictions
+        DataFrame avec les prédictions formatées
     """
     results = pd.DataFrame({
         'pickup_datetime': df['pickup_datetime'],

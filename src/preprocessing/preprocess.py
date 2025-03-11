@@ -3,27 +3,18 @@ Module pour le prétraitement des données
 """
 import numpy as np
 import pandas as pd
+import datetime
 
-def extract_datetime_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Extraire les caractéristiques temporelles de pickup_datetime
-    
-    Args:
-        df: DataFrame contenant la colonne pickup_datetime
-        
-    Returns:
-        DataFrame avec les nouvelles caractéristiques
-    """
-    data = df.copy()
-    
-    # Extraire les caractéristiques temporelles
-    data['hour'] = data['pickup_datetime'].dt.hour
-    data['weekday'] = data['pickup_datetime'].dt.weekday
-    data['month'] = data['pickup_datetime'].dt.month
-    
-    data['abnormal_period'] = 0  
-    
-    return data
+# Les dates anormales sont calculées à partir des données,
+abnormal_dates = None
+
+def step1_add_features(X):
+    res = X.copy()
+    res['weekday'] = res['pickup_datetime'].dt.weekday
+    res['month'] = res['pickup_datetime'].dt.month
+    res['hour'] = res['pickup_datetime'].dt.hour
+    res['abnormal_period'] = res['pickup_datetime'].dt.date.isin(abnormal_dates.index).astype(int) if abnormal_dates is not None else 0
+    return res
 
 def transform_target(y: pd.Series) -> pd.Series:
     """
