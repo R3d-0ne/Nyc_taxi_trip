@@ -1,87 +1,49 @@
-# Prédiction de la durée des trajets en taxi à New York
+# NYC Taxi Trip Duration Prediction
 
-Ce projet vise à prédire la durée des trajets en taxi à New York en utilisant des techniques de Machine Learning.
+API de prédiction de la durée des trajets taxis à New York
 
-## Structure du projet
+## Utilisation
 
-```
-├── config/             # Fichiers de configuration
-├── data/              # Données
-│   ├── raw/          # Données brutes
-│   └── processed/    # Données prétraitées
-├── notebooks/         # Notebooks Jupyter
-└── src/              # Code source
-    ├── data/         # Scripts de gestion des données
-    ├── models/       # Scripts des modèles
-    ├── preprocessing/ # Scripts de prétraitement
-    └── utils/        # Utilitaires
-```
-
-## Installation
-
+1. Installer les dépendances :
 ```bash
 pip install -r requirements.txt
 ```
 
-## Téléchargement des données
-
-Pour télécharger les données, exécutez la commande suivante :
-
+2. Entraîner le modèle :
 ```bash
-wget https://github.com/eishkina-estia/ML2023/raw/main/data/New_York_City_Taxi_Trip_Duration.zip -P data/raw
+python model/train.py
 ```
 
-Le fichier sera téléchargé dans le dossier `data/raw` du projet. Le chemin complet sera :
-```
-data/raw/New_York_City_Taxi_Trip_Duration.zip
-```
-
-## Entraînement du modèle
-
-Pour entraîner le modèle, exécutez la commande suivante :
-
+3. Démarrer l'API :
 ```bash
-python -m src.train_model
+uvicorn model.api.main:app --reload
 ```
 
-Cette commande va :
-1. Charger les données depuis le fichier ZIP
-2. Préparer les features (caractéristiques temporelles)
-3. Entraîner un modèle Ridge avec un pipeline de prétraitement
-4. Évaluer le modèle sur les données d'entraînement et de test
-5. Sauvegarder le modèle dans le dossier `models/`
+4. Accéder à la documentation :
+http://localhost:8000/docs
 
-## Test d'inférence
-
-Pour tester le modèle sur quelques exemples, exécutez :
-
+## Exemple de requête
 ```bash
-python -m src.test_inference
+curl -X POST "http://localhost:8000/predict" \
+  -H "Content-Type: application/json" \
+  -d '{"pickup_datetime": "2024-03-15T14:30:00"}'
 ```
 
-Cette commande va :
-1. Charger les données et le modèle entraîné
-2. Sélectionner aléatoirement 5 exemples
-3. Préparer les features pour ces exemples
-4. Faire des prédictions de durée de trajet
-5. Afficher les résultats
+## Réponse attendue
+```json
+{
+  "duree_trajet_minutes": 25.5,
+  "heure_arrivee": "2024-03-15T14:55:30"
+}
+```
 
-## Features utilisées
+## Structure de la base de données
+Les prédictions sont stockées dans `data/processed/predictions.db` :
 
-Le modèle utilise les features suivantes :
-- **Features numériques** : 
-  - Heure du jour (`hour`)
-  - Indicateur de période anormale (`abnormal_period`)
-- **Features catégorielles** : 
-  - Jour de la semaine (`weekday`)
-  - Mois (`month`)
-
-Ces features sont prétraitées avant d'être utilisées par le modèle :
-- Les features numériques sont standardisées avec `StandardScaler`
-- Les features catégorielles sont encodées avec `OneHotEncoder`
-
-## Performance du modèle
-
-Le modèle Ridge entraîné atteint une performance de :
-- RMSE sur l'ensemble d'entraînement : ~0.7925 (log)
-- RMSE sur l'ensemble de test : ~0.7935 (log)
+| Colonne                | Type         | Description                          |
+|------------------------|--------------|--------------------------------------|
+| id                     | INTEGER      | Clé primaire auto-incrémentée        |
+| pickup_datetime        | TEXT         | Date/heure de prise en charge (ISO)  |
+| predicted_duration     | REAL         | Durée prédite en minutes             |
+| prediction_timestamp   | DATETIME     | Horodatage de la prédiction          |
+```

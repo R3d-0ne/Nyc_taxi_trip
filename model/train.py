@@ -19,6 +19,10 @@ def transform_target(y):
     """Transformer la variable cible (log transformation)"""
     return np.log1p(y)
 
+def inverse_transform_target(y_log):
+    """Transforme la cible prédite en échelle originale"""
+    return np.expm1(y_log)
+
 def preprocess_data(X):
     print(f"Preprocessing data")
     return X
