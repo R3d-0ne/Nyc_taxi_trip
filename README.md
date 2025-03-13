@@ -2,24 +2,44 @@
 
 API de prédiction de la durée des trajets taxis à New York
 
-## Utilisation
+## MLflow Tracking
+
+Le projet utilise MLflow pour suivre les expériences et gérer les modèles.
+
+### Structure
+- Les runs sont organisés avec une structure parent/child
+- Chaque run child teste un hyperparamètre alpha différent
+- Le meilleur modèle est automatiquement enregistré dans le registry
+
+### Utilisation
 
 1. Installer les dépendances :
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Entraîner le modèle :
+2. Lancer l'entraînement :
 ```bash
-python model/train.py
+python model/train_taxi_mlflow.py
 ```
 
-3. Démarrer l'API :
+3. Tester le modèle :
+```bash
+python model/test_taxi_mlflow.py
+```
+
+4. Visualiser les résultats :
+```bash
+mlflow ui
+```
+Accéder à http://localhost:5000
+
+5. Démarrer l'API :
 ```bash
 uvicorn model.api.main:app --reload
 ```
 
-4. Accéder à la documentation :
+6. Accéder à la documentation :
 http://localhost:8000/docs
 
 ## Exemple de requête
@@ -46,4 +66,8 @@ Les prédictions sont stockées dans `data/processed/predictions.db` :
 | pickup_datetime        | TEXT         | Date/heure de prise en charge (ISO)  |
 | predicted_duration     | REAL         | Durée prédite en minutes             |
 | prediction_timestamp   | DATETIME     | Horodatage de la prédiction          |
-```
+
+### Métriques suivies
+- RMSE (Root Mean Squared Error)
+- R² Score
+- MSE (Mean Squared Error)

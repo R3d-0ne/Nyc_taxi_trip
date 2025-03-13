@@ -1,0 +1,12 @@
+name: nyc-taxi
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - numpy=1.23.5
+  - pandas=1.5.3
+  - scikit-learn=1.2.2
+  - pip
+  - pip:
+    - mlflow==2.3.2
+    - python-dateutil==2.8.2

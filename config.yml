@@ -1,5 +1,16 @@
 paths:
-  db_path: ./data/diabetes.db
-  model_path: ./model-registry/diabetes.model
+  data: data/processed/nyc_taxi.db
+  processed_path: data/processed/taxi_processed.pkl 
+  mlruns: mlruns
+mlflow:
+  model_name: Yankee_Best_Cab
+  experiment_name: taxi_trip_duration
+  artifact_path: sklearn-model
 ml:
+  target_name: trip_duration
+  features: ['abnormal_period', 'hour', 'weekday', 'month']
   random_state: 42
+  test_size: 0.2
+  alpha: 0.1
+  abnormal_period: 6300
+
