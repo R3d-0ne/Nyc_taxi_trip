@@ -85,7 +85,7 @@ async def predict(trip: InputModel):
     }
 
 
-
+""" Utilisation du modèle personnalisé depuis le dossier taxi_class"""
 @app.post("/predict_custom")
 async def predict_custom(trip: InputModel):
     # Créer le DataFrame avec les données d'entrée
