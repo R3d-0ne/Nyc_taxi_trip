@@ -5,7 +5,7 @@ paths:
 mlflow:
   model_name: Yankee_Best_Cab
   experiment_name: taxi_trip_duration
-  artifact_path: sklearn-model
+  artifact_path: sklearn-src
 ml:
   target_name: trip_duration
   features: ['abnormal_period', 'hour', 'weekday', 'month']

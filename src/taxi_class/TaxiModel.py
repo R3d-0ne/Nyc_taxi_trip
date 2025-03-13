@@ -1,10 +1,21 @@
 import numpy as np
+import os
+import yaml
 
 
 class TaxiModel:
     def __init__(self, model):
         self.model = model
-        self.features = ['abnormal_period', 'hour', 'weekday', 'month']
+        
+        # Charger la configuration
+        ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        config_path = os.path.join(ROOT_DIR, "config.yml")
+        
+        with open(config_path, "r") as f:
+            CONFIG = yaml.safe_load(f)
+            
+        self.features = CONFIG['ml']['features']
+        self.abnormal_period = CONFIG['ml']['abnormal_period']
 
     def __preprocess(self, X):
         X = X.copy()
@@ -12,9 +23,9 @@ class TaxiModel:
         X['month'] = X['pickup_datetime'].dt.month
         X['hour'] = X['pickup_datetime'].dt.hour
         
-        # Calculer les dates anormales (moins de 6300 trajets)
+        # Calculer les dates anormales
         df_counts = X['pickup_datetime'].dt.date.value_counts()
-        abnormal_dates = df_counts[df_counts < 6300]
+        abnormal_dates = df_counts[df_counts < self.abnormal_period]
         X['abnormal_period'] = X['pickup_datetime'].dt.date.isin(abnormal_dates.index).astype(int)
         
         return X[self.features]

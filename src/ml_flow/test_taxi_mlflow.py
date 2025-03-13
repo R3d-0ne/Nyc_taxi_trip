@@ -2,14 +2,18 @@ import pickle
 import pandas as pd
 import mlflow
 import yaml
+import os
 
 # Configuration
-with open("config.yml", "r") as f:
+ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+config_path = os.path.join(ROOT_DIR, "config.yml")
+
+with open(config_path, "r") as f:
     CONFIG = yaml.safe_load(f)
 
-MLFLOW_TRACKING_URI = "file:" + CONFIG['paths']['mlruns']
+MLFLOW_TRACKING_URI = "file:" + os.path.join(ROOT_DIR, CONFIG['paths']['mlruns'])
 MODEL_NAME = CONFIG['mlflow']['model_name']
-PROCESSED_PATH = CONFIG['paths']['processed_path']
+PROCESSED_PATH = os.path.join(ROOT_DIR, CONFIG['paths']['processed_path'])
 
 def load_test_data():
     with open(PROCESSED_PATH, "rb") as file:
@@ -30,7 +34,7 @@ if __name__ == "__main__":
     model_metadata = mlflow_client.get_latest_versions(MODEL_NAME, stages=["None"])
     latest_model_version = model_metadata[0].version
 
-    print("Load model from the model registry")
+    print("Load src from the src registry")
     model_uri = f"models:/{MODEL_NAME}/{latest_model_version}"
     print(f"Model URI: {model_uri}")
     model = mlflow.pyfunc.load_model(model_uri=model_uri)

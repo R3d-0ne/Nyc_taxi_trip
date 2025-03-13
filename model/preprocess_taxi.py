@@ -28,7 +28,7 @@ def preprocess():
     con = sqlite3.connect(DB_PATH)
     data = pd.read_sql('SELECT * FROM train', con)
     con.close()
-    print(f"Preprocessing data...")
+    print(f"Prétraitement des données...")
 
     # Conversion de la date
     data['pickup_datetime'] = pd.to_datetime(data['pickup_datetime'])

@@ -3,11 +3,17 @@ import pandas as pd
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_squared_error
 import os, pickle
-from model.TaxiModel import TaxiModel
+import yaml
+from TaxiModel import TaxiModel
 
 # Chemins absolus
-ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-DB_PATH = os.path.join(ROOT_DIR, "data", "processed", "nyc_taxi.db")
+ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+config_path = os.path.join(ROOT_DIR, "config.yml")
+
+with open(config_path, "r") as f:
+    CONFIG = yaml.safe_load(f)
+
+DB_PATH = os.path.join(ROOT_DIR, CONFIG['paths']['data'])
 MODEL_PATH = os.path.join(ROOT_DIR, "models", "ridge_model_custom.joblib")
 RAW_DATA_PATH = os.path.join(ROOT_DIR, "data", "raw", "New_York_City_Taxi_Trip_Duration.zip")
 

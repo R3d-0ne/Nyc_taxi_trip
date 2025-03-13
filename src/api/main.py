@@ -1,26 +1,41 @@
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 import pickle
 import os
 from datetime import datetime
 import pandas as pd
-from model import TaxiModel
-from model.train import prepare_features, inverse_transform_target
-import numpy as np
+import sys
+
+# Ajouter les répertoires pertinents au chemin de recherche Python
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, parent_dir)
+taxi_class_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'taxi_class'))
+sys.path.insert(0, taxi_class_dir)
+
+# Maintenant on peut importer depuis les modules requis
+from train import prepare_features, inverse_transform_target
+import yaml
 import sqlite3
 
+# Configuration
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+config_path = os.path.join(ROOT_DIR, "config.yml")
+
+with open(config_path, "r") as f:
+    CONFIG = yaml.safe_load(f)
+
 # Charger le modèle
-MODEL_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'models', 'ridge_model.joblib')
+MODEL_PATH = os.path.join(ROOT_DIR, "models", "ridge_model.joblib")
 with open(MODEL_PATH, 'rb') as file: 
     model, features = pickle.load(file)
 
 # Charger le modèle personnalisé
-MODEL_PATH_CUSTOM = os.path.join(os.path.dirname(__file__), '..', '..', 'models', 'ridge_model_custom.joblib')
+MODEL_PATH_CUSTOM = os.path.join(ROOT_DIR, "models", "ridge_model_custom.joblib")
 with open(MODEL_PATH_CUSTOM, 'rb') as file:
     model_custom = pickle.load(file)  
 
-PREDICTIONS_DB = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'processed', 'nyc_taxi.db')
+PREDICTIONS_DB = os.path.join(ROOT_DIR, CONFIG['paths']['data'])
 
 class InputModel(BaseModel):
     pickup_datetime: datetime
@@ -111,5 +126,12 @@ async def predict_custom(trip: InputModel):
 
 
 if __name__ == '__main__':
-    uvicorn.run("main:app", host="0.0.0.0",
-                port=8000, reload=True)
+    # Pour exécuter l'API directement à partir de ce fichier
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    
+    # Note: Pour lancer depuis la ligne de commande, utilisez:
+    # cd src/api
+    # uvicorn main:app --reload
+    # 
+    # OU depuis la racine du projet:
+    # uvicorn src.api.main:app --reload

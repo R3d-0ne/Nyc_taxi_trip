@@ -20,12 +20,12 @@ pip install -r requirements.txt
 
 2. Lancer l'entraînement :
 ```bash
-python model/train_taxi_mlflow.py
+python src/train_taxi_mlflow.py
 ```
 
 3. Tester le modèle :
 ```bash
-python model/test_taxi_mlflow.py
+python src/test_taxi_mlflow.py
 ```
 
 4. Visualiser les résultats :
@@ -36,7 +36,7 @@ Accéder à http://localhost:5000
 
 5. Démarrer l'API :
 ```bash
-uvicorn model.api.main:app --reload
+uvicorn src.api.main:app --reload
 ```
 
 6. Accéder à la documentation :

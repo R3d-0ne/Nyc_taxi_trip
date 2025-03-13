@@ -9,18 +9,20 @@ import os
 import yaml
 
 # Configuration
-with open("config.yml", "r") as f:
+ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+config_path = os.path.join(ROOT_DIR, "config.yml")
+
+with open(config_path, "r") as f:
     CONFIG = yaml.safe_load(f)
 
-ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-DB_PATH =  CONFIG['paths']['data']
+DB_PATH = os.path.join(ROOT_DIR, CONFIG['paths']['data'])
 MLFLOW_TRACKING_URI = "file:" + os.path.join(ROOT_DIR, CONFIG['paths']['mlruns'])
 EXPERIMENT_NAME = CONFIG['mlflow']['experiment_name']
 MODEL_NAME = CONFIG['mlflow']['model_name']
 ARTIFACT_PATH = CONFIG['mlflow']['artifact_path']
 ALPHAS = [0.01, 0.1, 1, 10]
 RUN_NAME = "ridge_regression"
-PROCESSED_PATH = CONFIG['paths']['processed_path']
+PROCESSED_PATH = os.path.join(ROOT_DIR, CONFIG['paths']['processed_path'])
 
 
 def load_train_data():
@@ -83,7 +85,7 @@ def main():
         print("#" * 20)
         model_uri = f"runs:/{best_run_id}/{ARTIFACT_PATH}"
         mv = mlflow.register_model(model_uri, MODEL_NAME)
-        print("Model saved to the model registry:")
+        print("Model saved to the src registry:")
         print(f"Name: {mv.name}")
         print(f"Version: {mv.version}")
         print(f"Source: {mv.source}")

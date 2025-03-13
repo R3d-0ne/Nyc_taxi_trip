@@ -2,18 +2,24 @@ import sqlite3
 import pandas as pd
 from sklearn.metrics import mean_squared_error
 import pickle
-from model.train import preprocess_data, prepare_features
+from train import preprocess_data, prepare_features
 import os
+import yaml
 
-# Chemins absolus
+# Configuration
 ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-DB_PATH = os.path.join(ROOT_DIR, "data", "processed", "nyc_taxi.db")
+config_path = os.path.join(ROOT_DIR, "config.yml")
+
+with open(config_path, "r") as f:
+    CONFIG = yaml.safe_load(f)
+
+DB_PATH = os.path.join(ROOT_DIR, CONFIG['paths']['data'])
 MODEL_PATH = os.path.join(ROOT_DIR, "models", "ridge_model.joblib")
 
 def load_model(path):
     print(f"Loading the model from {path}")
     with open(path, "rb") as file:
-        model, features = pickle.load(file)  # Décompressez le tuple
+        model, features = pickle.load(file)  
     print(f"Done")
     return model
 
@@ -31,7 +37,7 @@ def load_test_data(path):
 def evaluate_model(model, X, y):
     print(f"Evaluating the model")
     X_preprocessed = preprocess_data(X)
-    X_test = prepare_features(X_preprocessed)  # Appliquez les mêmes transformations
+    X_test = prepare_features(X_preprocessed) 
     y_pred = model.predict(X_test)
     score = mean_squared_error(y, y_pred)
     return score

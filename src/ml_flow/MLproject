@@ -6,4 +6,4 @@ entry_points:
   main:
     parameters:
       alpha: {type: float, default: 1.0}
-    command: "python model/train_taxi_model.py"
+    command: "python src/ml_flow/train_taxi_mlflow.py"
