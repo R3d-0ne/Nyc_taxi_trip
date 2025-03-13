@@ -5,6 +5,7 @@ import pickle
 import os
 from datetime import datetime
 import pandas as pd
+from model import TaxiModel
 from model.train import prepare_features, inverse_transform_target
 import numpy as np
 import sqlite3
@@ -13,6 +14,11 @@ import sqlite3
 MODEL_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'models', 'ridge_model.joblib')
 with open(MODEL_PATH, 'rb') as file: 
     model, features = pickle.load(file)
+
+# Charger le modèle personnalisé
+MODEL_PATH_CUSTOM = os.path.join(os.path.dirname(__file__), '..', '..', 'models', 'ridge_model_custom.joblib')
+with open(MODEL_PATH_CUSTOM, 'rb') as file:
+    model_custom = pickle.load(file)  
 
 PREDICTIONS_DB = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'processed', 'nyc_taxi.db')
 
@@ -62,6 +68,45 @@ async def predict(trip: InputModel):
         "duree_trajet_minutes": duree_minutes,
         "heure_arrivee approximative": heure_arrivee
     }
+
+
+
+@app.post("/predict_custom")
+async def predict_custom(trip: InputModel):
+    # Créer le DataFrame avec les données d'entrée
+    temp_df = pd.DataFrame([{
+        'pickup_datetime': trip.pickup_datetime
+    }])
+    
+    duration_secondes = model_custom.predict(temp_df)[0]
+         
+    # Stockage dans SQLite
+    conn = sqlite3.connect(PREDICTIONS_DB)
+    c = conn.cursor()
+    
+    # Créer la table si elle n'existe pas
+    c.execute('''CREATE TABLE IF NOT EXISTS predictions_custom
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  pickup_datetime TEXT,
+                  predicted_duration REAL,
+                  prediction_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    
+    # Insérer les données
+    c.execute('''INSERT INTO predictions_custom 
+                 (pickup_datetime, predicted_duration)
+                 VALUES (?, ?)''',
+              (trip.pickup_datetime.isoformat(), duration_secondes))
+    print(f"Données insérées dans la base de données : {trip.pickup_datetime.isoformat()} - {duration_secondes}")
+    
+    conn.commit()
+    conn.close()
+    
+
+    return {
+        "duree_trajet_secon": duration_secondes,
+        "modele": "custom"
+    }
+
 
 
 

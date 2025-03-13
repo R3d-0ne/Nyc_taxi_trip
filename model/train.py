@@ -118,6 +118,42 @@ def save_to_sqlite(data, db_path, test_size=0.3, random_state=42):
     
     print(f"Données sauvegardées : {len(train_data)} lignes train, {len(test_data)} lignes test")
 
+class CustomModel:
+    def __init__(self, model_path, db_path):
+        self.model_path = model_path
+        self.db_path = db_path
+        self.model = None
+        self.features = None
+        
+    def load(self):
+        """Charger le modèle depuis le fichier"""
+        with open(self.model_path, 'rb') as f:
+            self.model, self.features = pickle.load(f)
+            
+    def predict_and_store(self, input_datetime):
+        """Faire une prédiction et stocker le résultat"""
+        # Prétraitement
+        temp_df = pd.DataFrame([{'pickup_datetime': input_datetime}])
+        processed = prepare_features(temp_df)
+        input_data = processed[self.features]
+        
+        # Prédiction
+        prediction_log = self.model.predict(input_data)[0]
+        duration_seconds = inverse_transform_target(prediction_log)
+        duration_minutes = round(duration_seconds / 60, 1)
+        
+        # Stockage
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute('''INSERT INTO predictions 
+                     (pickup_datetime, predicted_duration)
+                     VALUES (?, ?)''',
+                  (input_datetime.isoformat(), duration_minutes))
+        conn.commit()
+        conn.close()
+        
+        return duration_minutes
+
 if __name__ == "__main__":
     if not os.path.exists(DB_PATH):
         print("Première exécution : préparation des données...")
