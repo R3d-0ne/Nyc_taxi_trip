@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import pickle
 import os
 import numpy as np
-
+from sklearn.pipeline import Pipeline
 import yaml
 
 
@@ -49,7 +49,23 @@ def preprocess():
     
     y = np.log1p(y)
     
+    # Séparation des features numériques et catégorielles
+    num_features = ['abnormal_period', 'hour']
+    cat_features = ['weekday', 'month']
+    
+    # Création du ColumnTransformer
+    column_transformer = ColumnTransformer([
+        ('ohe', OneHotEncoder(handle_unknown="ignore"), cat_features),
+        ('scaling', StandardScaler(), num_features)
+    ])
+    
+    # Division en ensembles d'entraînement et de test
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE)
+    
+    # Application du prétraitement
+    X_train_transformed = column_transformer.fit_transform(X_train)
+    X_test_transformed = column_transformer.transform(X_test)
+    
     print(f"Fin du prétraitement des données")
 
     print(f"Sauvegarde des données dans {PROCESSED_PATH}...")
@@ -57,8 +73,16 @@ def preprocess():
     model_dir = os.path.dirname(PROCESSED_PATH)
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
+        
+    # Sauvegarde du ColumnTransformer pour une utilisation ultérieure
+    transformer_path = os.path.join(model_dir, "column_transformer.pkl")
+    with open(transformer_path, "wb") as f:
+        pickle.dump(column_transformer, f)
+        print(f"ColumnTransformer sauvegardé dans {transformer_path}")
+    
+    # Sauvegarde des données prétraitées
     with open(PROCESSED_PATH, "wb") as f:
-        pickle.dump((X_train, X_test, y_train, y_test), f)
+        pickle.dump((X_train_transformed, X_test_transformed, y_train, y_test), f)
         print(f"Données prétraitées et enregistrées dans {PROCESSED_PATH}")
 
 if __name__ == "__main__":

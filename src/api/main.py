@@ -6,17 +6,16 @@ import os
 from datetime import datetime
 import pandas as pd
 import sys
+import mlflow
+import yaml
+import sqlite3
+import numpy as np
 
 # Ajouter les répertoires pertinents au chemin de recherche Python
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, parent_dir)
 taxi_class_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'taxi_class'))
 sys.path.insert(0, taxi_class_dir)
-
-# Maintenant on peut importer depuis les modules requis
-from train import prepare_features, inverse_transform_target
-import yaml
-import sqlite3
 
 # Configuration
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -25,10 +24,19 @@ config_path = os.path.join(ROOT_DIR, "config.yml")
 with open(config_path, "r") as f:
     CONFIG = yaml.safe_load(f)
 
-# Charger le modèle
-MODEL_PATH = os.path.join(ROOT_DIR, "models", "ridge_model.joblib")
-with open(MODEL_PATH, 'rb') as file: 
-    model, features = pickle.load(file)
+# Configuration MLflow
+MLFLOW_TRACKING_URI = "file:" + os.path.join(ROOT_DIR, CONFIG['paths']['mlruns'])
+MODEL_NAME = CONFIG['mlflow']['model_name']
+
+# Initialiser le client MLflow
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+mlflow_client = mlflow.MlflowClient()
+
+# Charger le dernier modèle du registre MLflow
+model_metadata = mlflow_client.get_latest_versions(MODEL_NAME, stages=["None"])
+latest_model_version = model_metadata[0].version
+model_uri = f"models:/{MODEL_NAME}/{latest_model_version}"
+model = mlflow.pyfunc.load_model(model_uri=model_uri)
 
 # Charger le modèle personnalisé
 MODEL_PATH_CUSTOM = os.path.join(ROOT_DIR, "models", "ridge_model_custom.joblib")
@@ -46,15 +54,25 @@ app = FastAPI()
 
 @app.post("/predict")
 async def predict(trip: InputModel):
+    # Créer le DataFrame avec les données d'entrée
     temp_df = pd.DataFrame([{
         'pickup_datetime': trip.pickup_datetime
     }])
     
-    processed = prepare_features(temp_df)
-    input_data = processed[['abnormal_period', 'hour', 'weekday', 'month']]
+    # Préparation des features
+    temp_df['weekday'] = temp_df['pickup_datetime'].dt.weekday
+    temp_df['month'] = temp_df['pickup_datetime'].dt.month
+    temp_df['hour'] = temp_df['pickup_datetime'].dt.hour
     
+    # Identification des périodes anormales
+    temp_df['abnormal_period'] = 0  # Par défaut, on suppose que ce n'est pas une période anormale
+    
+    # Sélection des features pour la prédiction
+    input_data = temp_df[['abnormal_period', 'hour', 'weekday', 'month']]
+    
+    # Prédiction avec le modèle MLflow
     prediction_log = model.predict(input_data)[0]
-    duree_secondes = inverse_transform_target(prediction_log)
+    duree_secondes = np.expm1(prediction_log)  # Inverse de log1p
     duree_minutes = round(duree_secondes / 60, 1)
     heure_arrivee = trip.pickup_datetime + pd.Timedelta(minutes=duree_minutes)
     
@@ -67,13 +85,14 @@ async def predict(trip: InputModel):
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   pickup_datetime TEXT,
                   predicted_duration REAL,
-                  prediction_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+                  prediction_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                  model_version TEXT)''')
     
     # Insérer les données
     c.execute('''INSERT INTO predictions 
-                 (pickup_datetime, predicted_duration)
-                 VALUES (?, ?)''',
-              (trip.pickup_datetime.isoformat(), duree_minutes))
+                 (pickup_datetime, predicted_duration, model_version)
+                 VALUES (?, ?, ?)''',
+              (trip.pickup_datetime.isoformat(), duree_minutes, f"MLflow_v{latest_model_version}"))
     print(f"Données insérées dans la base de données : {trip.pickup_datetime.isoformat()} - {duree_minutes}")
     
     conn.commit()
@@ -81,11 +100,11 @@ async def predict(trip: InputModel):
     
     return {
         "duree_trajet_minutes": duree_minutes,
-        "heure_arrivee approximative": heure_arrivee
+        "heure_arrivee_approximative": heure_arrivee,
+        "version_modele": f"MLflow_v{latest_model_version}"
     }
 
 
-""" Utilisation du modèle personnalisé depuis le dossier taxi_class"""
 @app.post("/predict_custom")
 async def predict_custom(trip: InputModel):
     # Créer le DataFrame avec les données d'entrée
@@ -116,17 +135,13 @@ async def predict_custom(trip: InputModel):
     conn.commit()
     conn.close()
     
-
     return {
         "duree_trajet_secon": duration_secondes,
         "modele": "custom"
     }
 
 
-
-
 if __name__ == '__main__':
-    # Pour exécuter l'API directement à partir de ce fichier
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
     
     # Note: Pour lancer depuis la ligne de commande, utilisez:

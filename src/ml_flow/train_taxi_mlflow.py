@@ -2,7 +2,7 @@ import pickle
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import Ridge
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, r2_score
 import mlflow
 from mlflow.models import infer_signature
 import os
@@ -31,64 +31,92 @@ def load_train_data():
     return X_train, X_test, y_train, y_test
 
 def train_and_log_model(model, X_train, X_test, y_train, y_test):
-    
+    """
+    Entraîne un modèle Ridge, calcule les métriques et enregistre le tout dans MLflow
+    """
+    # Entraînement du modèle
     model.fit(X_train, y_train)
     
-    signature = infer_signature(X_train, y_train)
+    # Prédictions
+    y_pred = model.predict(X_test)
     
-    model_info = mlflow.sklearn.log_model(
+    # Calcul des métriques
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    r2 = r2_score(y_test, y_pred)
+    
+    # Enregistrement des métriques
+    mlflow.log_metric("rmse", rmse)
+    mlflow.log_metric("r2", r2)
+    
+    # Enregistrement du modèle
+    signature = infer_signature(X_train, model.predict(X_train))
+    mlflow.sklearn.log_model(
         sk_model=model,
         artifact_path=ARTIFACT_PATH,
         signature=signature
     )
-
-    results = mlflow.evaluate(
-        model_info.model_uri,
-        data=pd.concat([X_test, y_test], axis=1),
-        targets=y_test.name,
-        model_type="regressor",
-        evaluators=["default"]
-    )
-    return results
+    
+    # Retourne les métriques pour comparaison
+    metrics = {"root_mean_squared_error": rmse, "r2_score": r2}
+    return metrics
 
 def main():
+    # Configuration de MLflow
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    X_train, X_test, y_train, y_test = load_train_data()
-
     mlflow.set_experiment(EXPERIMENT_NAME)
     
+    # Chargement des données
+    X_train, X_test, y_train, y_test = load_train_data()
+    
+    # Affichage des informations sur les données
+    print(f"X_train shape: {X_train.shape}")
+    print(f"X_test shape: {X_test.shape}")
+    
+    # Recherche des valeurs NaN
+    # if isinstance(X_train, np.ndarray):
+    #     print(f"NaN in X_train: {np.isnan(X_train).any()}")
+    #     print(f"NaN in X_test: {np.isnan(X_test).any()}")
+    
+    # Variables pour suivre le meilleur modèle
     best_score = float('inf')
     best_run_id = None
     
-    num_iterations = len(ALPHAS)
-    k = 0
-    run_name = "ridge_regression"
-
-    with mlflow.start_run(run_name=run_name, description=run_name) as parent_run:
-        for alpha in ALPHAS:
-            k += 1
-            print(f"\n***** ITERATION {k} from {num_iterations} *****")
-            child_run_name = f"{run_name}_{k:02}"
+    # Exécution des expériences pour différentes valeurs d'alpha
+    with mlflow.start_run(run_name=RUN_NAME) as parent_run:
+        for i, alpha in enumerate(ALPHAS, 1):
+            print(f"\n***** ITERATION {i} from {len(ALPHAS)} *****")
+            
+            # Création du modèle Ridge avec l'alpha actuel
             model = Ridge(alpha=alpha)
             
-            with mlflow.start_run(run_name=child_run_name, nested=True) as child_run:
+            # Entraînement et évaluation dans une sous-expérience
+            with mlflow.start_run(run_name=f"{RUN_NAME}_{i:02}", nested=True) as child_run:
+                # Enregistrement du paramètre alpha
                 mlflow.log_param("alpha", alpha)
-                results = train_and_log_model(model, X_train, X_test, y_train, y_test)
                 
-                if results.metrics['root_mean_squared_error'] < best_score:
-                    best_score = results.metrics['root_mean_squared_error']
+                # Entraînement et évaluation du modèle
+                metrics = train_and_log_model(model, X_train, X_test, y_train, y_test)
+                
+                # Mise à jour du meilleur modèle si nécessaire
+                if metrics["root_mean_squared_error"] < best_score:
+                    best_score = metrics["root_mean_squared_error"]
                     best_run_id = child_run.info.run_id
                 
-                print(f"rmse: {results.metrics['root_mean_squared_error']}")
-                print(f"r2: {results.metrics['r2_score']}")
+                # Affichage des résultats
+                print(f"rmse: {metrics['root_mean_squared_error']}")
+                print(f"r2: {metrics['r2_score']}")
         
+        # Enregistrement du meilleur modèle dans le registre MLflow
         print("#" * 20)
-        model_uri = f"runs:/{best_run_id}/{ARTIFACT_PATH}"
-        mv = mlflow.register_model(model_uri, MODEL_NAME)
-        print("Model saved to the src registry:")
-        print(f"Name: {mv.name}")
-        print(f"Version: {mv.version}")
-        print(f"Source: {mv.source}")
+        if best_run_id:
+            model_uri = f"runs:/{best_run_id}/{ARTIFACT_PATH}"
+            mv = mlflow.register_model(model_uri, MODEL_NAME)
+            print("Modèle enregistré dans le registre:")
+            print(f"Nom: {mv.name}")
+            print(f"Version: {mv.version}")
+            print(f"Source: {mv.source}")
+        else:
+            print("Aucun modèle n'a pu être enregistré.")
 
 if __name__ == "__main__":
     main()
